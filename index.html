@@ -3,475 +3,451 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>하프 마라톤 2:00 도전 — 훈련 플래너</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<title>RunPlan AI — 나만의 러닝 플래너</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:        rgba(8,12,18,0.82);
-  --bg2:       rgba(14,20,28,0.78);
-  --bg3:       rgba(20,28,38,0.80);
-  --border:    rgba(255,255,255,0.09);
-  --border2:   rgba(255,255,255,0.16);
-  --text:      #E6EDF3;
-  --muted:     #8B949E;
-  --blue:      #3B8BF5;
-  --blue-dim:  rgba(59,139,245,0.15);
-  --orange:    #FF6B35;
-  --orange-dim:rgba(255,107,53,0.15);
-  --green:     #2DCB75;
-  --green-dim: rgba(45,203,117,0.13);
-  --yellow:    #F0C040;
-  --yellow-dim:rgba(240,192,64,0.13);
-  --purple:    #B48EFF;
-  --gray-dim:  rgba(139,148,158,0.12);
-  --radius:    10px;
-  --radius-lg: 14px;
-  --glass:     rgba(10,15,22,0.78);
-  --blur:      blur(14px);
+  --orange:#FF6B35; --orange-dim:rgba(255,107,53,0.15);
+  --blue:#3B8BF5;   --blue-dim:rgba(59,139,245,0.14);
+  --green:#2DCB75;  --green-dim:rgba(45,203,117,0.12);
+  --purple:#B48EFF; --purple-dim:rgba(180,142,255,0.14);
+  --yellow:#F0C040; --yellow-dim:rgba(240,192,64,0.13);
+  --red:#FF5C5C;    --red-dim:rgba(255,92,92,0.13);
+  --text:#E6EDF3; --muted:#8B949E; --hint:#555E6A;
+  --border:rgba(255,255,255,0.09); --border2:rgba(255,255,255,0.16);
+  --glass:rgba(8,14,22,0.80);
+  --blur:blur(16px);
+  --r:10px; --rl:14px;
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: #080C12;
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  min-height: 100vh;
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:#060A0F;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;overflow-x:hidden;}
 
-/* ===== TRACK BACKGROUND ===== */
-#track-bg {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 0; overflow: hidden; pointer-events: none;
-}
-#track-bg svg {
-  width: 100%; height: 100%;
-  min-width: 600px;
-}
-#track-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(4,7,12,0.68); z-index: 1; pointer-events: none;
-}
-.container { position: relative; z-index: 2; }
+/* ── TRACK BG ── */
+#tbg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+#tbg svg{width:100%;height:100%;}
+#tov{position:fixed;inset:0;background:rgba(3,6,11,0.72);z-index:1;pointer-events:none;}
 
-a { color: var(--blue); text-decoration: none; }
+/* ── ONBOARDING ── */
+#onboarding{position:relative;z-index:10;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}
+.ob-logo{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:4px;color:var(--orange);margin-bottom:32px;opacity:.7;}
+.ob-card{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border2);border-radius:20px;padding:36px 40px;width:100%;max-width:560px;}
+.ob-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1.5px;line-height:1.1;margin-bottom:6px;}
+.ob-title span{color:var(--orange);}
+.ob-sub{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.5;}
 
-/* LAYOUT */
-.container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+/* steps */
+.steps{display:flex;align-items:center;gap:6px;margin-bottom:28px;}
+.step-dot{width:28px;height:4px;border-radius:2px;background:var(--border2);transition:background .3s;}
+.step-dot.active{background:var(--orange);}
+.step-dot.done{background:rgba(255,107,53,.4);}
+.step-label{font-size:11px;color:var(--muted);margin-left:8px;}
 
-/* HEADER */
-.site-header {
-  border-bottom: 1px solid var(--border);
-  padding: 28px 0 24px;
-  margin-bottom: 32px;
-  background: rgba(4,8,14,0.55);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  padding-left: 20px; padding-right: 20px;
-  margin-left: -20px; margin-right: -20px;
-}
-.header-inner { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-.header-title { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 2px; line-height: 1; color: var(--text); }
-.header-title span { color: var(--orange); }
-.header-sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
-.stat-chips { display: flex; gap: 10px; flex-wrap: wrap; }
-.stat-chip {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 8px 14px;
-  text-align: center;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-.stat-chip-n { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--blue); }
-.stat-chip-l { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.step-panel{display:none;}
+.step-panel.on{display:block;}
 
-/* TABS */
-.tabs {
-  display: flex; gap: 4px; border-bottom: 1px solid var(--border);
-  margin-bottom: 28px; flex-wrap: wrap;
-  background: rgba(4,8,14,0.45);
-  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  padding: 4px 8px 0; margin-left: -8px; margin-right: -8px;
-}
-.tab-btn {
-  background: none; border: none; color: var(--muted); font-size: 13px;
-  font-family: 'DM Sans', sans-serif; font-weight: 500;
-  padding: 10px 18px; cursor: pointer; border-bottom: 2px solid transparent;
-  transition: color .2s, border-color .2s; white-space: nowrap;
-}
-.tab-btn:hover { color: var(--text); }
-.tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
+/* form */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.fgrid.full{grid-template-columns:1fr;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.fg input,.fg select{background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 13px;outline:none;transition:border-color .2s,background .2s;-webkit-appearance:none;}
+.fg input:focus,.fg select:focus{border-color:var(--orange);background:rgba(255,107,53,.05);}
+.fg select option{background:#0D1117;}
+.fg input::placeholder{color:var(--hint);}
 
-/* CARDS */
-.card {
-  background: var(--glass);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px 22px;
-}
-.card + .card, .card + .section-grid { margin-top: 16px; }
-.card-title { font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+/* bmi display */
+.bmi-display{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.bmi-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;}
+.bmi-label{font-size:12px;color:var(--muted);margin-top:1px;}
+.bmi-badge{font-size:11px;font-weight:500;padding:4px 10px;border-radius:99px;}
 
-/* GRID */
-.section-grid { display: grid; gap: 16px; }
-.grid-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-.grid-4 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+/* buttons */
+.btn-main{width:100%;background:var(--orange);color:#fff;border:none;border-radius:var(--r);padding:13px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .2s;margin-top:8px;}
+.btn-main:hover{opacity:.87;}
+.btn-main:disabled{opacity:.4;cursor:not-allowed;}
+.btn-back{background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--muted);padding:10px 18px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
+.btn-back:hover{color:var(--text);border-color:rgba(255,255,255,.28);}
+.btn-row{display:flex;gap:10px;margin-top:8px;}
+.btn-row .btn-main{flex:1;}
 
-/* METRIC MINI */
-.metric { background: rgba(255,255,255,0.05); border: 1px solid var(--border); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border-radius: var(--radius); padding: 14px 16px; }
-.metric-n { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; }
-.metric-l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+/* ── AI LOADING ── */
+#loading{position:fixed;inset:0;z-index:50;background:rgba(3,6,11,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;backdrop-filter:blur(8px);}
+#loading.on{display:flex;}
+.loader-track{width:220px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+.loader-fill{height:100%;background:var(--orange);border-radius:2px;animation:loadpulse 1.8s ease-in-out infinite;}
+@keyframes loadpulse{0%{width:0%;margin-left:0;}50%{width:60%;margin-left:20%;}100%{width:0%;margin-left:100%};}
+.loader-text{font-size:13px;color:var(--muted);font-family:'DM Mono',monospace;}
 
-/* TIMELINE */
-.timeline { display: flex; flex-direction: column; gap: 0; }
-.tl-row {
-  display: grid; grid-template-columns: 36px 130px 1fr 70px;
-  align-items: center; gap: 12px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--border);
-}
-.tl-row:last-child { border-bottom: none; }
-.tl-month { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
-.tl-badge {
-  font-size: 11px; font-weight: 500; padding: 3px 10px;
-  border-radius: 99px; white-space: nowrap; text-align: center;
-}
-.tl-focus { font-size: 13px; color: var(--muted); }
-.tl-km { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); text-align: right; }
-.tl-row.winter { opacity: .55; }
+/* ── MAIN APP ── */
+#app{display:none;position:relative;z-index:10;}
+#app.on{display:block;}
+.container{max-width:980px;margin:0 auto;padding:0 20px;}
 
-/* PHASE SWITCHER */
-.phase-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.phase-btn {
-  background: rgba(255,255,255,0.05); border: 1px solid var(--border2);
-  border-radius: 8px; padding: 6px 14px; font-size: 12px;
-  font-family: 'DM Sans', sans-serif; font-weight: 500;
-  color: var(--muted); cursor: pointer; transition: all .15s;
-}
-.phase-btn:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
-.phase-btn.active { color: var(--text); border-color: var(--orange); background: var(--orange-dim); }
+.site-header{border-bottom:1px solid var(--border);padding:20px 0 18px;margin-bottom:28px;background:rgba(3,7,12,.6);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);}
+.header-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.header-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--orange);}
+.header-name{font-size:16px;font-weight:500;color:var(--text);}
+.header-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+.profile-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.pchip{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:6px 12px;text-align:center;}
+.pchip-n{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;}
+.pchip-l{font-size:10px;color:var(--muted);margin-top:1px;}
 
-/* SCHEDULE ROWS */
-.sched-row { display: flex; align-items: flex-start; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
-.sched-row:last-child { border-bottom: none; }
-.sched-day { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; min-width: 22px; color: var(--muted); padding-top: 2px; }
-.sched-text { font-size: 13px; color: var(--text); }
-.sched-type { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; margin-right: 6px; }
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;background:rgba(3,7,12,.45);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:var(--rl) var(--rl) 0 0;padding:4px 6px 0;margin-left:-6px;margin-right:-6px;}
+.tab-btn{background:none;border:none;color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;padding:9px 16px;cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s;white-space:nowrap;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange);}
+.tp{display:none;}
+.tp.active{display:block;}
 
-/* INTERVAL CARD */
-.int-block {
-  background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 14px 16px; margin-bottom: 10px;
-}
-.int-block:last-child { margin-bottom: 0; }
-.int-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.int-title { font-size: 14px; font-weight: 500; color: var(--text); }
-.int-detail-badge {
-  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
-  padding: 3px 10px; border-radius: 6px;
-}
-.int-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
-.int-meta-item label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
-.int-meta-item p { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text); }
-.int-note { font-size: 12px; color: var(--muted); border-left: 2px solid var(--border2); padding-left: 10px; }
+/* cards */
+.card{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--rl);padding:20px 22px;}
+.card+.card,.card+.sgrid{margin-top:14px;}
+.ctitle{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;}
+.sgrid{display:grid;gap:14px;}
+.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+.g3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+.g4{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}
 
-/* PACE BAR */
-.pace-item { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.pace-item:last-child { border-bottom: none; }
-.pace-name { font-size: 13px; min-width: 90px; }
-.pace-bar-track { flex: 1; background: rgba(255,255,255,0.07); border-radius: 99px; height: 5px; overflow: hidden; }
-.pace-bar-fill { height: 100%; border-radius: 99px; }
-.pace-val { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); min-width: 110px; text-align: right; }
+/* metric */
+.metric{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;}
+.mn{font-family:'DM Mono',monospace;font-size:21px;font-weight:500;}
+.ml{font-size:11px;color:var(--muted);margin-top:2px;}
 
-/* TIP BOX */
-.tip-box { border-left: 3px solid var(--orange); padding: 8px 12px; border-radius: 0 6px 6px 0; background: var(--orange-dim); margin-top: 14px; font-size: 13px; color: var(--muted); }
+/* phase badge */
+.pbadge{display:inline-block;font-size:11px;font-weight:500;padding:3px 10px;border-radius:99px;white-space:nowrap;}
+.pb-blue{background:var(--blue-dim);color:#6BAFF8;}
+.pb-green{background:var(--green-dim);color:#4DD990;}
+.pb-orange{background:var(--orange-dim);color:#FF8A5C;}
+.pb-purple{background:var(--purple-dim);color:var(--purple);}
+.pb-gray{background:rgba(139,148,158,.12);color:#8B949E;}
 
-/* ========== LOG SECTION ========== */
-.log-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.form-group { display: flex; flex-direction: column; gap: 5px; }
-.form-group label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-.form-group input, .form-group select, .form-group textarea {
-  background: rgba(255,255,255,0.05); border: 1px solid var(--border2); border-radius: var(--radius);
-  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px;
-  padding: 9px 12px; outline: none; transition: border-color .2s;
-}
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--orange); }
-.form-group textarea { resize: vertical; min-height: 68px; }
-.form-group select option { background: var(--bg2); }
-.form-notes { grid-column: 1 / -1; }
+/* monthly timeline */
+.month-row{display:grid;grid-template-columns:30px 90px 110px 1fr 70px;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.month-row:last-child{border-bottom:none;}
+.month-n{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);}
+.month-km{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);text-align:right;}
+.month-focus{font-size:13px;color:var(--muted);}
 
-.btn-primary {
-  background: var(--orange); color: #fff; border: none;
-  border-radius: var(--radius); padding: 11px 24px;
-  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
-  cursor: pointer; transition: opacity .2s;
-}
-.btn-primary:hover { opacity: .88; }
-.btn-ghost {
-  background: transparent; color: var(--muted); border: 1px solid var(--border2);
-  border-radius: 6px; padding: 5px 10px; font-size: 12px;
-  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .15s;
-}
-.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
+/* weekly */
+.week-selector{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.week-prev,.week-next{background:rgba(255,255,255,.05);border:1px solid var(--border2);border-radius:var(--r);padding:7px 14px;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;transition:all .15s;}
+.week-prev:hover,.week-next:hover{color:var(--text);border-color:rgba(255,255,255,.28);}
+.week-info{flex:1;text-align:center;}
+.week-num{font-size:15px;font-weight:500;color:var(--text);}
+.week-phase{font-size:12px;color:var(--muted);margin-top:1px;}
 
-.log-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
-.log-stat { background: rgba(255,255,255,0.05); border: 1px solid var(--border); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border-radius: var(--radius); padding: 12px 14px; }
-.log-stat-n { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; color: var(--green); }
-.log-stat-l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+/* day cards */
+.days-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px;}
+.day-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:12px;transition:border-color .2s;}
+.day-card:hover{border-color:var(--border2);}
+.day-card.rest{opacity:.55;}
+.day-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.day-name{font-size:11px;font-weight:500;color:var(--muted);}
+.day-type-dot{width:7px;height:7px;border-radius:50%;}
+.day-km{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;margin-bottom:3px;}
+.day-type-text{font-size:11px;color:var(--muted);}
+.day-pace{font-size:11px;color:var(--hint);margin-top:3px;}
 
-/* ENTRIES */
-.week-group { margin-bottom: 20px; }
-.week-label {
-  font-size: 11px; font-weight: 500; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .07em;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border);
-  margin-bottom: 10px;
-}
-.entry-card {
-  background: rgba(10,16,24,0.70); border: 1px solid var(--border);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border-radius: var(--radius); padding: 12px 16px;
-  display: grid; grid-template-columns: 80px 1fr auto;
-  align-items: center; gap: 12px; margin-bottom: 8px;
-  transition: border-color .2s;
-}
-.entry-card:hover { border-color: var(--border2); }
-.entry-date { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
-.entry-main { }
-.entry-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
-.entry-type-badge {
-  font-size: 10px; font-weight: 500; padding: 2px 8px;
-  border-radius: 4px; white-space: nowrap;
-}
-.entry-dist { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
-.entry-pace { font-size: 12px; color: var(--muted); }
-.entry-note { font-size: 12px; color: var(--muted); }
-.entry-actions { display: flex; gap: 6px; }
+/* week summary bar */
+.week-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:14px;}
+.ws-item{background:rgba(255,255,255,.04);border-radius:var(--r);padding:10px 12px;text-align:center;}
+.ws-n{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--text);}
+.ws-l{font-size:11px;color:var(--muted);margin-top:1px;}
 
-.empty-state {
-  text-align: center; padding: 40px 20px;
-  color: var(--muted); font-size: 13px;
-}
-.empty-icon { font-size: 36px; margin-bottom: 10px; opacity: .4; }
+/* pace guide */
+.pace-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
+.pace-row:last-child{border-bottom:none;}
+.pace-name{font-size:13px;min-width:100px;}
+.pace-track{flex:1;background:rgba(255,255,255,.06);border-radius:99px;height:5px;overflow:hidden;}
+.pace-fill{height:100%;border-radius:99px;}
+.pace-val{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);min-width:110px;text-align:right;}
 
-/* TYPE COLORS */
-.type-easy   { background: rgba(45,203,117,.15); color: #2DCB75; }
-.type-tempo  { background: rgba(240,192,64,.15);  color: #F0C040; }
-.type-interval { background: rgba(255,107,53,.15); color: #FF6B35; }
-.type-long   { background: rgba(59,139,245,.15);  color: #3B8BF5; }
-.type-recovery { background: rgba(139,148,158,.15); color: #8B949E; }
+/* tip box */
+.tipbox{border-left:3px solid var(--orange);padding:8px 12px;border-radius:0 6px 6px 0;background:var(--orange-dim);margin-top:12px;font-size:13px;color:var(--muted);line-height:1.5;}
 
-/* CHART */
-.chart-wrap { position: relative; width: 100%; height: 220px; }
+/* log */
+.log-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+.log-notes{grid-column:1/-1;}
+.log-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px;}
+.ls-item{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;}
+.ls-n{font-family:'DM Mono',monospace;font-size:19px;font-weight:500;color:var(--green);}
+.ls-l{font-size:11px;color:var(--muted);margin-top:1px;}
+.entry{background:rgba(8,14,22,.75);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:var(--r);padding:11px 15px;display:grid;grid-template-columns:70px 1fr auto;align-items:center;gap:12px;margin-bottom:8px;}
+.entry-date{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);}
+.entry-badge{font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;margin-right:6px;}
+.entry-km{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;}
+.entry-pace{font-size:12px;color:var(--muted);}
+.entry-note{font-size:12px;color:var(--muted);}
+.week-group{margin-bottom:18px;}
+.week-hdr{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.empty{text-align:center;padding:36px;color:var(--muted);font-size:13px;}
+.empty-ico{font-size:32px;margin-bottom:10px;opacity:.35;}
 
-/* PHASE BADGE COLORS */
-.badge-blue   { background: var(--blue-dim);   color: #6BAFF8; }
-.badge-green  { background: var(--green-dim);  color: #4DD990; }
-.badge-orange { background: var(--orange-dim); color: #FF8A5C; }
-.badge-gray   { background: var(--gray-dim);   color: #8B949E; }
-.badge-purple { background: rgba(180,142,255,.15); color: var(--purple); }
+/* type colors */
+.tc-easy{background:rgba(45,203,117,.14);color:#2DCB75;}
+.tc-tempo{background:rgba(240,192,64,.14);color:#F0C040;}
+.tc-interval{background:rgba(255,107,53,.14);color:#FF6B35;}
+.tc-long{background:rgba(59,139,245,.14);color:#3B8BF5;}
+.tc-recovery{background:rgba(139,148,158,.14);color:#8B949E;}
+.tc-rest{background:rgba(255,255,255,.05);color:#555E6A;}
 
-/* NOTE CALLOUT */
-.note-callout {
-  background: var(--blue-dim); border: 1px solid rgba(59,139,245,.2);
-  border-radius: var(--radius); padding: 12px 16px; font-size: 13px;
-  color: #6BAFF8; margin-bottom: 16px; line-height: 1.6;
-}
+/* dot colors */
+.dot-easy{background:#2DCB75;} .dot-tempo{background:#F0C040;} .dot-interval{background:#FF6B35;}
+.dot-long{background:#3B8BF5;} .dot-recovery{background:#8B949E;} .dot-rest{background:#2A2F36;}
 
-/* RESPONSIVE */
-@media (max-width: 600px) {
-  .header-title { font-size: 30px; }
-  .tl-row { grid-template-columns: 32px 100px 1fr; }
-  .tl-km { display: none; }
-  .entry-card { grid-template-columns: 60px 1fr auto; gap: 8px; }
-}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s;}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.28);}
+.btn-orange{background:var(--orange);color:#fff;border:none;border-radius:var(--r);padding:10px 22px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .2s;}
+.btn-orange:hover{opacity:.87;}
+.reset-btn{background:transparent;border:1px solid rgba(255,92,92,.3);border-radius:var(--r);color:var(--red);padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;}
+.reset-btn:hover{background:var(--red-dim);}
 
-/* WINTER LABEL */
-.winter-banner {
-  background: var(--gray-dim); border: 1px dashed rgba(139,148,158,.3);
-  border-radius: var(--radius); padding: 12px 16px;
-  font-size: 13px; color: var(--muted); text-align: center;
-  margin: 16px 0;
+.chart-wrap{position:relative;width:100%;height:200px;}
+
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:var(--orange-dim);border:1px solid rgba(255,107,53,.25);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:500;color:var(--orange);margin-bottom:12px;}
+
+@media(max-width:600px){
+  .ob-card{padding:24px 20px;}
+  .fgrid{grid-template-columns:1fr;}
+  .month-row{grid-template-columns:26px 80px 1fr;} .month-km{display:none;}
+  .days-grid{grid-template-columns:repeat(4,1fr);}
+  .entry{grid-template-columns:56px 1fr auto;}
+  .header-inner{flex-direction:column;align-items:flex-start;}
 }
 </style>
 </head>
 <body>
 
-<div id="track-overlay"></div>
-<div id="track-bg">
+<!-- TRACK BACKGROUND -->
+<div id="tov"></div>
+<div id="tbg">
 <svg viewBox="0 0 1400 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-  <!-- Deep field base -->
-  <rect width="1400" height="800" fill="#060A0F"/>
-  <!-- Outer track surface -->
-  <rect x="80" y="80" width="1240" height="640" rx="320" fill="#9B3A14"/>
-  <!-- Lane lines (8 lanes, stroke only) -->
-  <rect x="91"  y="91"  width="1218" height="618" rx="309" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <rect x="102" y="102" width="1196" height="596" rx="298" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <rect x="113" y="113" width="1174" height="574" rx="287" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <rect x="124" y="124" width="1152" height="552" rx="276" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <rect x="135" y="135" width="1130" height="530" rx="265" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <rect x="146" y="146" width="1108" height="508" rx="254" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <rect x="157" y="157" width="1086" height="486" rx="243" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-  <!-- Inner track edge (infield boundary) -->
-  <rect x="168" y="168" width="1064" height="464" rx="232" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
-  <!-- Infield grass -->
-  <rect x="172" y="172" width="1056" height="456" rx="228" fill="#132B1C"/>
-  <!-- Infield center circle -->
-  <circle cx="700" cy="400" r="60" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-  <circle cx="700" cy="400" r="6"  fill="rgba(255,255,255,0.12)"/>
-  <!-- Infield horizontal centerline -->
-  <line x1="350" y1="400" x2="1050" y2="400" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-  <!-- Infield vertical centerline -->
-  <line x1="700" y1="215" x2="700" y2="585" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-  <!-- Finish line (right straight, ~2/3 across) -->
-  <line x1="1060" y1="80" x2="1060" y2="720" stroke="rgba(255,255,255,0.55)" stroke-width="3"/>
-  <!-- Finish text -->
-  <text x="1068" y="76" font-size="10" fill="rgba(255,255,255,0.35)" font-family="sans-serif">FINISH</text>
-  <!-- Start/finish arc marker on lane 1 -->
-  <line x1="1060" y1="80"  x2="1060" y2="92"  stroke="#FF6B35" stroke-width="3"/>
-  <line x1="1060" y1="708" x2="1060" y2="720" stroke="#FF6B35" stroke-width="3"/>
-  <!-- Distance markers on the track (subtle) -->
-  <text x="700" y="76" font-size="9" fill="rgba(255,255,255,0.2)" text-anchor="middle" font-family="monospace">200m</text>
-  <text x="342" y="404" font-size="9" fill="rgba(255,255,255,0.2)" text-anchor="middle" font-family="monospace">300m</text>
-  <text x="1058" y="74" font-size="9" fill="rgba(255,255,255,0.2)" text-anchor="end" font-family="monospace">0m / 400m</text>
+  <rect width="1400" height="800" fill="#050810"/>
+  <rect x="80" y="80" width="1240" height="640" rx="320" fill="#8B3210"/>
+  <rect x="91"  y="91"  width="1218" height="618" rx="309" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="102" y="102" width="1196" height="596" rx="298" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="113" y="113" width="1174" height="574" rx="287" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="124" y="124" width="1152" height="552" rx="276" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="135" y="135" width="1130" height="530" rx="265" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="146" y="146" width="1108" height="508" rx="254" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="157" y="157" width="1086" height="486" rx="243" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <rect x="168" y="168" width="1064" height="464" rx="232" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="1.5"/>
+  <rect x="172" y="172" width="1056" height="456" rx="228" fill="#101E14"/>
+  <circle cx="700" cy="400" r="55" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+  <circle cx="700" cy="400" r="5" fill="rgba(255,255,255,0.10)"/>
+  <line x1="350" y1="400" x2="1050" y2="400" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <line x1="700" y1="218" x2="700" y2="582" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <line x1="1060" y1="80" x2="1060" y2="720" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"/>
+  <line x1="1060" y1="80"  x2="1060" y2="93"  stroke="#FF6B35" stroke-width="3"/>
+  <line x1="1060" y1="707" x2="1060" y2="720" stroke="#FF6B35" stroke-width="3"/>
+  <text x="700" y="75" font-size="9" fill="rgba(255,255,255,0.18)" text-anchor="middle" font-family="monospace">200m</text>
+  <text x="1055" y="73" font-size="9" fill="rgba(255,255,255,0.18)" text-anchor="end" font-family="monospace">0 / 400m</text>
 </svg>
 </div>
 
+<!-- ──────────────── ONBOARDING ──────────────── -->
+<div id="onboarding">
+  <div class="ob-logo">RUNPLAN AI</div>
+  <div class="ob-card">
+    <div class="ob-title">나만의 <span>러닝 플랜</span><br>을 만들어드릴게요</div>
+    <div class="ob-sub">신체 정보와 목표를 입력하면 AI가 맞춤형 훈련 플랜을 자동으로 생성해드려요.</div>
+
+    <div class="steps">
+      <div class="step-dot active" id="sd0"></div>
+      <div class="step-dot" id="sd1"></div>
+      <div class="step-dot" id="sd2"></div>
+      <span class="step-label" id="slabel">1단계 · 기본 정보</span>
+    </div>
+
+    <!-- STEP 1: 기본 정보 -->
+    <div class="step-panel on" id="sp0">
+      <div class="fgrid">
+        <div class="fg">
+          <label>이름 (닉네임)</label>
+          <input type="text" id="f-name" placeholder="예: 유승복">
+        </div>
+        <div class="fg">
+          <label>나이</label>
+          <input type="number" id="f-age" placeholder="예: 30" min="10" max="90">
+        </div>
+        <div class="fg">
+          <label>키 (cm)</label>
+          <input type="number" id="f-height" placeholder="예: 175" min="100" max="250" oninput="calcBMI()">
+        </div>
+        <div class="fg">
+          <label>몸무게 (kg)</label>
+          <input type="number" id="f-weight" placeholder="예: 68" min="30" max="200" oninput="calcBMI()">
+        </div>
+      </div>
+      <div class="bmi-display" id="bmi-display">
+        <div>
+          <div class="bmi-val" id="bmi-val" style="color:var(--muted)">—</div>
+          <div class="bmi-label">BMI</div>
+        </div>
+        <span class="bmi-badge" id="bmi-badge" style="background:rgba(255,255,255,.05);color:var(--hint)">키·몸무게 입력 시 자동 계산</span>
+      </div>
+      <button class="btn-main" onclick="goStep(1)">다음 단계 →</button>
+    </div>
+
+    <!-- STEP 2: 목표 -->
+    <div class="step-panel" id="sp1">
+      <div class="fgrid full">
+        <div class="fg">
+          <label>목표 거리</label>
+          <select id="f-dist">
+            <option value="">선택하세요</option>
+            <option value="5">5km</option>
+            <option value="10">10km</option>
+            <option value="21.1">하프 마라톤 (21.1km)</option>
+            <option value="42.2">풀 마라톤 (42.2km)</option>
+          </select>
+        </div>
+      </div>
+      <div class="fgrid">
+        <div class="fg">
+          <label>목표 페이스 (분:초/km)</label>
+          <input type="text" id="f-pace" placeholder="예: 5:30" oninput="validatePace(this)">
+        </div>
+        <div class="fg">
+          <label>목표 개월 수</label>
+          <select id="f-months">
+            <option value="">선택하세요</option>
+            <option value="2">2개월</option>
+            <option value="3">3개월</option>
+            <option value="4">4개월</option>
+            <option value="6">6개월</option>
+            <option value="9">9개월</option>
+            <option value="12">12개월</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>현재 PB (선택)</label>
+          <input type="text" id="f-pb" placeholder="예: 52:30 (10km)">
+        </div>
+        <div class="fg">
+          <label>주당 달릴 수 있는 일수</label>
+          <select id="f-days">
+            <option value="3">주 3회</option>
+            <option value="4" selected>주 4회</option>
+            <option value="5">주 5회</option>
+            <option value="6">주 6회</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="goStep(0)">← 이전</button>
+        <button class="btn-main" onclick="goStep(2)">다음 단계 →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: 확인 -->
+    <div class="step-panel" id="sp2">
+      <div id="confirm-summary" style="margin-bottom:18px;display:flex;flex-direction:column;gap:8px;"></div>
+      <div class="btn-row">
+        <button class="btn-back" onclick="goStep(1)">← 이전</button>
+        <button class="btn-main" id="gen-btn" onclick="generatePlan()">🤖 플랜 생성하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── LOADING ──────────────── -->
+<div id="loading">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:var(--orange);">플랜 생성 중</div>
+  <div class="loader-track"><div class="loader-fill"></div></div>
+  <div class="loader-text" id="loader-msg">신체 데이터 분석 중...</div>
+</div>
+
+<!-- ──────────────── MAIN APP ──────────────── -->
+<div id="app">
 <div class="container">
   <header class="site-header">
     <div class="header-inner">
       <div>
-        <div class="header-title">하프 마라톤 <span>2:00</span> 도전</div>
-        <div class="header-sub">2026년 6월 — 2027년 3월 · 겨울(11~1월) 유지기 포함 · 10km 기록 52:50 기준</div>
+        <div class="header-logo">RUNPLAN AI</div>
+        <div class="header-name" id="app-name">러너</div>
+        <div class="header-sub" id="app-sub"></div>
       </div>
-      <div class="stat-chips">
-        <div class="stat-chip">
-          <div class="stat-chip-n">5:17</div>
-          <div class="stat-chip-l">현재 페이스</div>
-        </div>
-        <div class="stat-chip">
-          <div class="stat-chip-n">5:41</div>
-          <div class="stat-chip-l">목표 페이스</div>
-        </div>
-        <div class="stat-chip">
-          <div class="stat-chip-n" style="color:var(--green)">1:57</div>
-          <div class="stat-chip-l">예상 기록*</div>
-        </div>
-      </div>
+      <div class="profile-chips" id="profile-chips"></div>
+      <button class="reset-btn" onclick="resetApp()">처음부터 다시</button>
     </div>
   </header>
 
-  <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('roadmap',this)">전체 로드맵</button>
-    <button class="tab-btn" onclick="switchTab('schedule',this)">단계별 스케줄</button>
-    <button class="tab-btn" onclick="switchTab('interval',this)">인터벌 훈련</button>
-    <button class="tab-btn" onclick="switchTab('chart',this)">거리 차트</button>
+    <button class="tab-btn active" onclick="switchTab('summary',this)">요약</button>
+    <button class="tab-btn" onclick="switchTab('monthly',this)">월별 계획</button>
+    <button class="tab-btn" onclick="switchTab('weekly',this)">주별 스케줄</button>
+    <button class="tab-btn" onclick="switchTab('paces',this)">페이스 가이드</button>
     <button class="tab-btn" onclick="switchTab('log',this)">훈련 기록 ✍</button>
   </div>
 
-  <!-- ======= TAB: ROADMAP ======= -->
-  <div id="tab-roadmap" class="tab-panel active">
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">* Riegel 공식 기반 예상치 — 현재 기록으로 이미 목표 가능. 핵심은 <strong style="color:var(--text)">거리 적응과 꾸준함</strong>입니다.</p>
-    <div class="card">
-      <div class="card-title">월별 훈련 로드맵</div>
-      <div class="timeline" id="timeline-rows"></div>
+  <!-- SUMMARY -->
+  <div id="tp-summary" class="tp active">
+    <div class="ai-badge">✦ AI 생성 플랜</div>
+    <div id="summary-content"></div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div id="tp-monthly" class="tp">
+    <div class="card" id="monthly-content"></div>
+  </div>
+
+  <!-- WEEKLY -->
+  <div id="tp-weekly" class="tp">
+    <div class="week-selector">
+      <button class="week-prev" onclick="changeWeek(-1)">← 이전 주</button>
+      <div class="week-info">
+        <div class="week-num" id="week-num-label">1주차</div>
+        <div class="week-phase" id="week-phase-label"></div>
+      </div>
+      <button class="week-next" onclick="changeWeek(1)">다음 주 →</button>
     </div>
-    <div class="section-grid grid-2" style="margin-top:16px;">
-      <div class="card">
-        <div class="card-title">부상 예방 원칙</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--orange);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">주간 거리 <strong style="color:var(--text)">10% 이상 급증 금지</strong></span></div>
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--orange);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">롱런 다음 날 <strong style="color:var(--text)">반드시 휴식</strong></span></div>
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--orange);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">월 1회 <strong style="color:var(--text)">회복 주간</strong> (거리 20% 감소)</span></div>
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--orange);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">인터벌은 <strong style="color:var(--text)">주 1회 이상 금지</strong></span></div>
+    <div class="days-grid" id="days-grid"></div>
+    <div class="week-summary" id="week-summary-bar"></div>
+    <div class="tipbox" id="week-tip"></div>
+  </div>
+
+  <!-- PACES -->
+  <div id="tp-paces" class="tp">
+    <div class="card">
+      <div class="ctitle">훈련 페이스 가이드</div>
+      <div id="pace-guide-content"></div>
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <div class="ctitle">페이스 계산기</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;">
+        <div class="fg">
+          <label>목표 거리 (km)</label>
+          <input type="number" id="calc-dist" placeholder="21.1" step="0.1" oninput="calcPaceTarget()">
+        </div>
+        <div class="fg">
+          <label>목표 시간 (시:분:초)</label>
+          <input type="text" id="calc-time" placeholder="2:00:00" oninput="calcPaceTarget()">
+        </div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">필요 페이스</div>
+          <div class="mn" id="calc-result" style="font-size:18px;">—</div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">성공 핵심 포인트</div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--green);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">훈련의 <strong style="color:var(--text)">80%는 편하게</strong>, 20%만 강도 높게</span></div>
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--green);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)"><strong style="color:var(--text)">9월에 21km 완주</strong> — 대회 자신감 확보</span></div>
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--green);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">10월 <strong style="color:var(--text)">10km 대회 참가</strong>로 실전 감각 익히기</span></div>
-          <div style="display:flex;gap:10px;align-items:flex-start;"><span style="color:var(--green);margin-top:2px;">▸</span><span style="font-size:13px;color:var(--muted)">수면 7시간 + <strong style="color:var(--text)">단백질 섭취</strong> 챙기기</span></div>
-        </div>
-      </div>
     </div>
   </div>
 
-  <!-- ======= TAB: SCHEDULE ======= -->
-  <div id="tab-schedule" class="tab-panel">
-    <div class="phase-tabs" id="phase-btns"></div>
-    <div id="phase-detail-card"></div>
-  </div>
-
-  <!-- ======= TAB: INTERVAL ======= -->
-  <div id="tab-interval" class="tab-panel">
-    <div class="note-callout">
-      <strong>기본 구조:</strong> 워밍업 조깅 15분 → 본 세트 → 쿨다운 조깅 10~15분 (총 약 50~70분)<br>
-      세트 간 휴식은 완전 정지 말고 <strong>천천히 조깅</strong>으로 — 마지막 세트도 첫 세트와 <strong>같은 페이스</strong>를 유지하는 게 핵심입니다.
+  <!-- LOG -->
+  <div id="tp-log" class="tp">
+    <div class="log-stats">
+      <div class="ls-item"><div class="ls-n" id="ls-total">0.0</div><div class="ls-l">누적 거리 (km)</div></div>
+      <div class="ls-item"><div class="ls-n" id="ls-count">0</div><div class="ls-l">총 훈련 횟수</div></div>
+      <div class="ls-item"><div class="ls-n" id="ls-week" style="color:var(--orange)">0.0</div><div class="ls-l">이번 주 (km)</div></div>
+      <div class="ls-item"><div class="ls-n" id="ls-long">0.0</div><div class="ls-l">최장 롱런 (km)</div></div>
     </div>
-
-    <div id="interval-content"></div>
-
-    <div class="card" style="margin-top:16px;">
-      <div class="card-title">훈련 페이스 가이드</div>
-      <div id="pace-guide"></div>
-    </div>
-  </div>
-
-  <!-- ======= TAB: CHART ======= -->
-  <div id="tab-chart" class="tab-panel">
-    <div class="card">
-      <div class="card-title">월별 주간 총거리 & 롱런 거리</div>
-      <div style="display:flex;gap:16px;margin-bottom:14px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
-        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:#3B8BF5;display:inline-block;"></span>주간 총거리 (km)</span>
-        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:#2DCB75;display:inline-block;"></span>롱런 (km)</span>
-        <span style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:#444C56;display:inline-block;"></span>겨울 유지기</span>
-      </div>
-      <div class="chart-wrap">
-        <canvas id="distChart" role="img" aria-label="월별 주간 총거리와 롱런 거리 변화">6월~10월 집중 훈련 후 겨울(11~1월) 유지기, 2월 테이퍼, 3월 대회.</canvas>
-      </div>
-    </div>
-    <div class="section-grid grid-4" style="margin-top:16px;">
-      <div class="metric"><div class="metric-n" style="color:var(--blue)">+56%</div><div class="metric-l">6월→10월 주간 거리 증가</div></div>
-      <div class="metric"><div class="metric-n" style="color:var(--green)">21km</div><div class="metric-l">9월 목표 롱런</div></div>
-      <div class="metric"><div class="metric-n" style="color:var(--orange)">3회</div><div class="metric-l">겨울 유지 달리기/주</div></div>
-      <div class="metric"><div class="metric-n" style="color:var(--purple)">2월</div><div class="metric-l">최종 테이퍼 시작</div></div>
-    </div>
-  </div>
-
-  <!-- ======= TAB: LOG ======= -->
-  <div id="tab-log" class="tab-panel">
-
-    <div class="log-stats" id="log-stats">
-      <div class="log-stat"><div class="log-stat-n" id="stat-total-km">0.0</div><div class="log-stat-l">누적 거리 (km)</div></div>
-      <div class="log-stat"><div class="log-stat-n" id="stat-count">0</div><div class="log-stat-l">총 훈련 횟수</div></div>
-      <div class="log-stat"><div class="log-stat-n" id="stat-week-km" style="color:var(--orange)">0.0</div><div class="log-stat-l">이번 주 거리 (km)</div></div>
-      <div class="log-stat"><div class="log-stat-n" id="stat-long-km">0.0</div><div class="log-stat-l">최장 롱런 (km)</div></div>
-    </div>
-
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-title">훈련 기록 추가</div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="ctitle">훈련 기록 추가</div>
       <div class="log-form">
-        <div class="form-group">
-          <label>날짜</label>
-          <input type="date" id="inp-date">
-        </div>
-        <div class="form-group">
-          <label>훈련 종류</label>
-          <select id="inp-type">
+        <div class="fg"><label>날짜</label><input type="date" id="li-date"></div>
+        <div class="fg"><label>종류</label>
+          <select id="li-type">
             <option value="easy">쉬운 달리기</option>
             <option value="tempo">템포런</option>
             <option value="interval">인터벌</option>
@@ -479,462 +455,650 @@ a { color: var(--blue); text-decoration: none; }
             <option value="recovery">회복 달리기</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>거리 (km)</label>
-          <input type="number" id="inp-dist" placeholder="예: 10.5" step="0.1" min="0">
-        </div>
-        <div class="form-group">
-          <label>시간 (분:초)</label>
-          <input type="text" id="inp-time" placeholder="예: 52:30">
-        </div>
-        <div class="form-group form-notes">
-          <label>메모 (선택)</label>
-          <textarea id="inp-note" placeholder="컨디션, 날씨, 느낀 점 등 자유롭게..."></textarea>
-        </div>
+        <div class="fg"><label>거리 (km)</label><input type="number" id="li-dist" placeholder="10.5" step="0.1" min="0" oninput="previewPace()"></div>
+        <div class="fg"><label>시간 (분:초)</label><input type="text" id="li-time" placeholder="52:30" oninput="previewPace()"></div>
+        <div class="fg log-notes"><label>메모</label><input type="text" id="li-note" placeholder="컨디션, 날씨, 느낀 점..."></div>
       </div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <button class="btn-primary" onclick="addEntry()">기록 저장</button>
+        <button class="btn-orange" onclick="addLogEntry()">저장</button>
         <span id="pace-preview" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--muted);"></span>
       </div>
     </div>
-
-    <div id="entries-container">
-      <div class="empty-state">
-        <div class="empty-icon">🏃</div>
-        <div>아직 기록된 훈련이 없어요.<br>첫 번째 훈련을 기록해 보세요!</div>
-      </div>
-    </div>
+    <div id="log-entries"></div>
   </div>
 
   <div style="height:48px;"></div>
 </div>
+</div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const timelineData = [
-  {month:'6월', phase:'1단계 — 기초 체력',   badge:'badge-blue',   longRun:'15~17km', focus:'달리기 루틴 정착 · 인터벌 입문'},
-  {month:'7월', phase:'1단계 — 기초 체력',   badge:'badge-blue',   longRun:'17km',    focus:'롱런 거리 증가 · 페이스 확립'},
-  {month:'8월', phase:'2단계 — 유산소 발달', badge:'badge-green',  longRun:'19km',    focus:'템포런 도입 · 유산소 역량 강화'},
-  {month:'9월', phase:'2단계 — 유산소 발달', badge:'badge-green',  longRun:'21km ⭐',  focus:'21km 롱런 달성 · 레이스 페이스 감각'},
-  {month:'10월',phase:'3단계 — 레이스 완성', badge:'badge-orange', longRun:'21km',    focus:'레이스 페이스 강화 · 대회 참가 추천'},
-  {month:'11월',phase:'겨울 유지기',          badge:'badge-gray',   longRun:'없음',    focus:'주 3회 쉬운 달리기 · 크로스트레이닝', winter:true},
-  {month:'12월',phase:'겨울 유지기',          badge:'badge-gray',   longRun:'없음',    focus:'체력 유지 · 근력 운동 병행', winter:true},
-  {month:'1월', phase:'겨울 유지기',          badge:'badge-gray',   longRun:'없음',    focus:'폼 교정 · 스트레칭 집중', winter:true},
-  {month:'2월', phase:'4단계 — 테이퍼',      badge:'badge-purple', longRun:'14km',    focus:'볼륨 줄이고 레이스 페이스 예리하게'},
-  {month:'3월', phase:'🏁 대회',              badge:'badge-orange', longRun:'21.1km',  focus:'목표: 2:00:00 이내 완주'},
-];
+/* ════════════════════════════════════
+   DATA & CONSTANTS
+════════════════════════════════════ */
+const DIST_CFG = {
+  5:    {startKm:15, peakKm:40, maxLong:8,  label:'5km'},
+  10:   {startKm:20, peakKm:55, maxLong:15, label:'10km'},
+  21.1: {startKm:25, peakKm:65, maxLong:24, label:'하프 마라톤'},
+  42.2: {startKm:35, peakKm:90, maxLong:35, label:'풀 마라톤'},
+};
+const TYPE_LABEL = {easy:'쉬운 달리기',tempo:'템포런',interval:'인터벌',long:'롱런',recovery:'회복 달리기',rest:'휴식'};
+const TYPE_CLS   = {easy:'tc-easy',tempo:'tc-tempo',interval:'tc-interval',long:'tc-long',recovery:'tc-recovery',rest:'tc-rest'};
+const TYPE_DOT   = {easy:'dot-easy',tempo:'dot-tempo',interval:'dot-interval',long:'dot-long',recovery:'dot-recovery',rest:'dot-rest'};
+const TYPE_COLOR = {easy:'#2DCB75',tempo:'#F0C040',interval:'#FF6B35',long:'#3B8BF5',recovery:'#8B949E',rest:'#2A2F36'};
+const LOG_KEY = 'runplan_log_v2';
 
-const phases = [
-  {
-    label:'1단계 기초', period:'6~7월', badgeCls:'badge-blue', weeklyKm:'30~40km',
-    goal:'15~17km 롱런 달성 · 인터벌 입문 · 달리기 루틴 정착',
-    days:[
-      {d:'월', type:'rest',     t:'휴식'},
-      {d:'화', type:'interval', t:'인터벌 훈련 (1단계 참조) — 총 8~10km'},
-      {d:'수', type:'easy',     t:'쉬운 달리기 6km (6:00~6:20/km)'},
-      {d:'목', type:'easy',     t:'쉬운 달리기 7km'},
-      {d:'금', type:'rest',     t:'휴식'},
-      {d:'토', type:'long',     t:'롱런 14~17km (5:50~6:10/km)'},
-      {d:'일', type:'recovery', t:'회복 조깅 5km 또는 스트레칭'},
-    ],
-    tip:'아직 속도보다 지구력입니다. 롱런 끝에도 대화할 수 있는 페이스가 정답.'
-  },
-  {
-    label:'2단계 유산소', period:'8~9월', badgeCls:'badge-green', weeklyKm:'40~50km',
-    goal:'21km 롱런 달성 · 템포런 도입 · 레이스 페이스 감각 구축',
-    days:[
-      {d:'월', type:'rest',     t:'휴식'},
-      {d:'화', type:'interval', t:'인터벌 훈련 (2단계 참조) — 총 10~12km'},
-      {d:'수', type:'easy',     t:'쉬운 달리기 8km'},
-      {d:'목', type:'tempo',    t:'템포런 8km (5:05~5:15/km)'},
-      {d:'금', type:'easy',     t:'쉬운 달리기 6km'},
-      {d:'토', type:'long',     t:'롱런 18~21km (5:45~6:00/km)'},
-      {d:'일', type:'recovery', t:'회복 조깅 6km'},
-    ],
-    tip:'9월에 21km를 한 번 완주해두면 대회날 훨씬 여유로워집니다.'
-  },
-  {
-    label:'3단계 완성', period:'10월', badgeCls:'badge-orange', weeklyKm:'46~52km',
-    goal:'레이스 페이스 런 강화 · 10월 10km 대회 참가 추천',
-    days:[
-      {d:'월', type:'rest',     t:'휴식'},
-      {d:'화', type:'interval', t:'인터벌 훈련 (3단계 참조) — 총 12~13km'},
-      {d:'수', type:'easy',     t:'쉬운 달리기 8km'},
-      {d:'목', type:'tempo',    t:'레이스 페이스 런 12km (5:35~5:40/km)'},
-      {d:'금', type:'easy',     t:'쉬운 달리기 6km'},
-      {d:'토', type:'long',     t:'롱런 21km (5:45/km) 또는 대회'},
-      {d:'일', type:'recovery', t:'회복 조깅 6km'},
-    ],
-    tip:'10월 대회에서 10km 기록을 측정해보세요. 레이스 페이스 감각이 완성됩니다.'
-  },
-  {
-    label:'겨울 유지', period:'11~1월', badgeCls:'badge-gray', weeklyKm:'20~25km',
-    goal:'부상 없이 체력 유지 · 봄 훈련 재개 준비',
-    days:[
-      {d:'월', type:'rest',     t:'휴식'},
-      {d:'화', type:'easy',     t:'쉬운 달리기 6~8km (실내 트레드밀 가능)'},
-      {d:'수', type:'rest',     t:'실내 크로스트레이닝 (사이클, 수영, 근력)'},
-      {d:'목', type:'easy',     t:'쉬운 달리기 6km'},
-      {d:'금', type:'rest',     t:'휴식 또는 스트레칭 30분'},
-      {d:'토', type:'easy',     t:'미들런 8~10km (편하게)'},
-      {d:'일', type:'rest',     t:'휴식'},
-    ],
-    tip:'롱런은 안 해도 됩니다. 주 3회 가볍게 달리는 것만으로도 충분해요.'
-  },
-  {
-    label:'4단계 테이퍼', period:'2월', badgeCls:'badge-purple', weeklyKm:'28~32km',
-    goal:'컨디션 최상화 · 거리 줄이고 레이스 페이스 예리하게',
-    days:[
-      {d:'월', type:'rest',     t:'휴식'},
-      {d:'화', type:'tempo',    t:'레이스 페이스 런 8km (5:35/km)'},
-      {d:'수', type:'easy',     t:'쉬운 달리기 6km'},
-      {d:'목', type:'interval', t:'인터벌 가볍게 — 800m × 4세트'},
-      {d:'금', type:'rest',     t:'휴식'},
-      {d:'토', type:'easy',     t:'미들런 14km (편하게)'},
-      {d:'일', type:'recovery', t:'회복 조깅 5km'},
-    ],
-    tip:'테이퍼 중 힘이 빠지는 느낌은 정상입니다. 믿고 쉬는 게 전략이에요.'
-  },
-];
+let planData = null;
+let currentWeek = 0;
 
-const intervalData = [
-  {
-    period:'6~7월 — 1단계', badgeCls:'badge-blue',
-    sets:[
-      {title:'400m 반복 달리기', detail:'400m × 6세트',
-       pace:'4:50~5:00 /km', rest:'400m 가볍게 조깅 (약 2~3분)',
-       note:'처음엔 4세트로 시작 → 2주마다 1세트 추가. 트랙 1바퀴 = 400m.'},
-      {title:'스트라이드', detail:'100m × 8회',
-       pace:'4:20~4:30 /km 감각', rest:'100m 걷기',
-       note:'쉬운 달리기 마지막 5분에 추가. 빠른 다리 회전 감각을 익히는 훈련.'},
-    ],
-    tip:'400m는 너무 빠르게 치고 나가면 후반에 무너집니다. 처음부터 일정 페이스로.'
-  },
-  {
-    period:'8~9월 — 2단계', badgeCls:'badge-green',
-    sets:[
-      {title:'800m 반복 달리기', detail:'800m × 5세트',
-       pace:'4:45~4:55 /km', rest:'800m 조깅 (3~4분)',
-       note:'8월: 4세트 시작 → 9월 5세트. 각 세트 페이스 편차 ±5초 이내 목표.'},
-      {title:'1km 반복 달리기', detail:'1km × 4세트',
-       pace:'4:50 /km', rest:'90초 가볍게 조깅',
-       note:'9월 후반 도입. 800m 세트와 격주로 교체 운영.'},
-    ],
-    tip:'800m 시작 200m는 절대 너무 빠르게 시작하지 마세요. 페이스를 균등하게 유지하는 게 핵심.'
-  },
-  {
-    period:'10월 — 3단계', badgeCls:'badge-orange',
-    sets:[
-      {title:'1km 반복 달리기', detail:'1km × 6세트',
-       pace:'4:45 /km', rest:'90초 조깅',
-       note:'이 구간의 핵심 훈련. 6세트 모두 같은 페이스 유지가 목표.'},
-      {title:'레이스 페이스 인터벌', detail:'2km × 3세트',
-       pace:'5:35~5:40 /km', rest:'3분 조깅',
-       note:'속도 훈련이 아님. 목표 레이스 페이스를 몸에 각인시키는 훈련. 격주로 1km 세트와 교체.'},
-    ],
-    tip:'두 세션을 격주로 번갈아 하세요 — 1km 인터벌 주 / 레이스 페이스 인터벌 주.'
-  },
-];
-
-const paceGuide = [
-  {name:'인터벌',    pace:'4:40~4:55 /km', pct:100, color:'#FF6B35'},
-  {name:'템포런',    pace:'5:00~5:15 /km', pct:82,  color:'#F0C040'},
-  {name:'레이스 페이스', pace:'5:30~5:40 /km', pct:64, color:'#3B8BF5'},
-  {name:'롱런',      pace:'5:45~6:05 /km', pct:48,  color:'#2DCB75'},
-  {name:'회복 달리기',pace:'6:00~6:20 /km', pct:33,  color:'#8B949E'},
-];
-
-const typeLabel = {easy:'쉬운 달리기', tempo:'템포런', interval:'인터벌', long:'롱런', recovery:'회복 달리기', rest:'휴식'};
-const typeCls   = {easy:'type-easy', tempo:'type-tempo', interval:'type-interval', long:'type-long', recovery:'type-recovery', rest:''};
-
-/* ---- RENDER FUNCTIONS ---- */
-function renderTimeline() {
-  const el = document.getElementById('timeline-rows');
-  timelineData.forEach(m => {
-    const row = document.createElement('div');
-    row.className = 'tl-row' + (m.winter ? ' winter' : '');
-    row.innerHTML = `
-      <span class="tl-month">${m.month}</span>
-      <span class="tl-badge ${m.badge}">${m.phase}</span>
-      <span class="tl-focus">${m.focus}</span>
-      <span class="tl-km">${m.longRun}</span>`;
-    el.appendChild(row);
+/* ════════════════════════════════════
+   STEP NAVIGATION
+════════════════════════════════════ */
+function goStep(n) {
+  if (n === 1 && !validateStep0()) return;
+  if (n === 2 && !validateStep1()) return;
+  if (n === 2) buildConfirmSummary();
+  [0,1,2].forEach(i => {
+    document.getElementById('sp'+i).classList.toggle('on', i===n);
+    const dot = document.getElementById('sd'+i);
+    dot.classList.toggle('active', i===n);
+    dot.classList.toggle('done', i<n);
   });
+  const labels = ['1단계 · 기본 정보','2단계 · 훈련 목표','3단계 · 확인 및 생성'];
+  document.getElementById('slabel').textContent = labels[n];
 }
 
-function renderPhaseBtns() {
-  const el = document.getElementById('phase-btns');
-  phases.forEach((p, i) => {
-    const b = document.createElement('button');
-    b.className = 'phase-btn' + (i === 0 ? ' active' : '');
-    b.textContent = p.label + ' (' + p.period + ')';
-    b.onclick = () => {
-      document.querySelectorAll('.phase-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      renderPhaseDetail(i);
-    };
-    el.appendChild(b);
-  });
-  renderPhaseDetail(0);
+function validateStep0() {
+  const age = document.getElementById('f-age').value;
+  const h   = document.getElementById('f-height').value;
+  const w   = document.getElementById('f-weight').value;
+  if (!age||!h||!w) { alert('나이, 키, 몸무게를 모두 입력해주세요.'); return false; }
+  return true;
+}
+function validateStep1() {
+  const dist   = document.getElementById('f-dist').value;
+  const pace   = document.getElementById('f-pace').value;
+  const months = document.getElementById('f-months').value;
+  if (!dist)   { alert('목표 거리를 선택해주세요.'); return false; }
+  if (!pace)   { alert('목표 페이스를 입력해주세요. (예: 5:30)'); return false; }
+  if (!parsePaceSec(pace)) { alert('페이스 형식이 잘못되었습니다. 예: 5:30'); return false; }
+  if (!months) { alert('목표 개월 수를 선택해주세요.'); return false; }
+  return true;
 }
 
-function renderPhaseDetail(idx) {
-  const p = phases[idx];
-  const el = document.getElementById('phase-detail-card');
-  el.innerHTML = `
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-        <div>
-          <div style="font-size:16px;font-weight:500;color:var(--text);">${p.label}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px;">${p.period} · ${p.weeklyKm}</div>
-        </div>
-        <span class="tl-badge ${p.badgeCls}" style="font-size:11px;">${p.weeklyKm}</span>
-      </div>
-      <div style="background:var(--bg3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--muted);">
-        <strong style="color:var(--text)">목표:</strong> ${p.goal}
-      </div>
-      <div id="sched-days"></div>
-      <div class="tip-box">${p.tip}</div>
-    </div>`;
-  const dr = document.getElementById('sched-days');
-  p.days.forEach(s => {
-    const d = document.createElement('div');
-    d.className = 'sched-row';
-    const badge = s.type !== 'rest' ? `<span class="sched-type ${typeCls[s.type]}">${typeLabel[s.type]}</span>` : '';
-    d.innerHTML = `<span class="sched-day">${s.d}</span><span class="sched-text">${badge}${s.t}</span>`;
-    dr.appendChild(d);
-  });
+function buildConfirmSummary() {
+  const el = document.getElementById('confirm-summary');
+  const distKm = parseFloat(document.getElementById('f-dist').value);
+  const distCfg = DIST_CFG[distKm] || {};
+  const rows = [
+    ['이름',    document.getElementById('f-name').value || '러너'],
+    ['나이',    document.getElementById('f-age').value + '세'],
+    ['BMI',     document.getElementById('bmi-val').textContent + ' · ' + document.getElementById('bmi-badge').textContent],
+    ['목표 거리', distCfg.label || distKm+'km'],
+    ['목표 페이스', document.getElementById('f-pace').value + ' /km'],
+    ['훈련 기간', document.getElementById('f-months').value + '개월'],
+    ['주당 훈련일', document.getElementById('f-days').value + '회'],
+  ];
+  const pb = document.getElementById('f-pb').value;
+  if (pb) rows.push(['현재 PB', pb]);
+  el.innerHTML = rows.map(([k,v]) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;">
+      <span style="font-size:13px;color:var(--muted);">${k}</span>
+      <span style="font-size:13px;font-weight:500;color:var(--text);">${v}</span>
+    </div>`).join('');
 }
 
-function renderIntervals() {
-  const el = document.getElementById('interval-content');
-  intervalData.forEach(ip => {
-    const wrap = document.createElement('div');
-    wrap.className = 'card';
-    wrap.style.marginBottom = '16px';
-    let setsHTML = ip.sets.map(s => `
-      <div class="int-block">
-        <div class="int-header">
-          <span class="int-title">${s.title}</span>
-          <span class="int-detail-badge ${ip.badgeCls}">${s.detail}</span>
-        </div>
-        <div class="int-meta">
-          <div class="int-meta-item"><label>목표 페이스</label><p>${s.pace}</p></div>
-          <div class="int-meta-item"><label>세트 간 휴식</label><p>${s.rest}</p></div>
-        </div>
-        <div class="int-note">▸ ${s.note}</div>
-      </div>`).join('');
-    wrap.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-        <span class="tl-badge ${ip.badgeCls}">${ip.period}</span>
-      </div>
-      ${setsHTML}
-      <div class="tip-box">${ip.tip}</div>`;
-    el.appendChild(wrap);
-  });
+/* ════════════════════════════════════
+   BMI
+════════════════════════════════════ */
+function calcBMI() {
+  const h = parseFloat(document.getElementById('f-height').value);
+  const w = parseFloat(document.getElementById('f-weight').value);
+  if (!h||!w) return;
+  const bmi = w / ((h/100)**2);
+  const bmiEl = document.getElementById('bmi-val');
+  const badgeEl = document.getElementById('bmi-badge');
+  bmiEl.textContent = bmi.toFixed(1);
+  let label, color, bg;
+  if (bmi < 18.5)      { label='저체중'; color='#6BAFF8'; bg='var(--blue-dim)'; bmiEl.style.color='#6BAFF8'; }
+  else if (bmi < 25)   { label='정상'; color='#4DD990'; bg='var(--green-dim)'; bmiEl.style.color='#4DD990'; }
+  else if (bmi < 30)   { label='과체중'; color='#F0C040'; bg='var(--yellow-dim)'; bmiEl.style.color='#F0C040'; }
+  else                 { label='비만'; color='#FF5C5C'; bg='var(--red-dim)'; bmiEl.style.color='#FF5C5C'; }
+  badgeEl.textContent = label;
+  badgeEl.style.background = bg;
+  badgeEl.style.color = color;
 }
 
-function renderPaceGuide() {
-  const el = document.getElementById('pace-guide');
-  paceGuide.forEach(p => {
-    const d = document.createElement('div');
-    d.className = 'pace-item';
-    d.innerHTML = `
-      <span class="pace-name">${p.name}</span>
-      <div class="pace-bar-track"><div class="pace-bar-fill" style="width:${p.pct}%;background:${p.color};"></div></div>
-      <span class="pace-val">${p.pace}</span>`;
-    el.appendChild(d);
-  });
+function validatePace(el) {
+  el.value = el.value.replace(/[^0-9:]/g,'');
 }
 
-function renderChart() {
-  const months = ['6월','7월','8월','9월','10월','11월','12월','1월','2월','3월'];
-  const weekly  = [34, 38, 43, 47, 49, 22, 22, 22, 30, null];
-  const longRun = [15, 17, 19, 21, 21, null, null, null, 14, 21];
-  const bgWeekly = weekly.map((_, i) => [5,6,7].includes(i) ? '#444C56' : '#3B8BF5');
-  const bgLong   = longRun.map((v, i) => (v === null || [5,6,7].includes(i)) ? 'transparent' : '#2DCB75');
-  new Chart(document.getElementById('distChart'), {
-    type: 'bar',
-    data: {
-      labels: months,
-      datasets: [
-        {label:'주간 총거리', data: weekly,  backgroundColor: bgWeekly, borderRadius: 4, barPercentage: .55},
-        {label:'롱런',        data: longRun, backgroundColor: bgLong,   borderRadius: 4, barPercentage: .55},
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color:'#8B949E', font:{size:11} }, grid: { display:false } },
-        y: { ticks: { color:'#8B949E', font:{size:11} }, grid: { color:'rgba(255,255,255,.05)' }, max: 60 }
+function parsePaceSec(str) {
+  if (!str) return null;
+  const p = str.trim().split(':');
+  if (p.length !== 2) return null;
+  const min = parseInt(p[0]), sec = parseInt(p[1]);
+  if (isNaN(min)||isNaN(sec)||sec>=60) return null;
+  return min*60 + sec;
+}
+
+function fmtPace(sec) {
+  const m = Math.floor(sec/60), s = Math.round(sec%60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+/* ════════════════════════════════════
+   PLAN GENERATOR
+════════════════════════════════════ */
+function generatePlan() {
+  const name   = document.getElementById('f-name').value || '러너';
+  const age    = parseInt(document.getElementById('f-age').value);
+  const height = parseFloat(document.getElementById('f-height').value);
+  const weight = parseFloat(document.getElementById('f-weight').value);
+  const bmi    = weight / ((height/100)**2);
+  const distKm = parseFloat(document.getElementById('f-dist').value);
+  const paceSec= parsePaceSec(document.getElementById('f-pace').value);
+  const months = parseInt(document.getElementById('f-months').value);
+  const daysPerWeek = parseInt(document.getElementById('f-days').value);
+  const pb     = document.getElementById('f-pb').value;
+
+  const profile = { name, age, height, weight, bmi: parseFloat(bmi.toFixed(1)), distKm, paceSec, months, daysPerWeek, pb };
+
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('loading').classList.add('on');
+
+  const msgs = ['신체 데이터 분석 중...','최적 훈련 강도 계산 중...','주간 거리 플랜 구성 중...','페이스 가이드 생성 중...','최종 플랜 완성 중...'];
+  let mi = 0;
+  const iv = setInterval(() => {
+    document.getElementById('loader-msg').textContent = msgs[Math.min(mi++, msgs.length-1)];
+  }, 500);
+
+  setTimeout(() => {
+    clearInterval(iv);
+    planData = buildPlan(profile);
+    document.getElementById('loading').classList.remove('on');
+    renderApp(planData);
+    document.getElementById('app').classList.add('on');
+  }, 2800);
+}
+
+function buildPlan(p) {
+  const cfg   = DIST_CFG[p.distKm] || DIST_CFG[21.1];
+  const prog  = p.bmi >= 30 ? 0.07 : p.bmi >= 27 ? 0.08 : 0.10;
+  const totalWeeks = p.months * 4;
+
+  // Phase allocation
+  const baseW  = Math.max(2, Math.round(totalWeeks * 0.30));
+  const buildW = Math.max(2, Math.round(totalWeeks * 0.35));
+  const speedW = Math.max(1, Math.round(totalWeeks * 0.25));
+  const taperW = Math.max(2, totalWeeks - baseW - buildW - speedW);
+
+  const phasesDef = [
+    {name:'기초 체력',  weeks:baseW,  color:'blue',   badgeCls:'pb-blue',   focus:'유산소 기초 · 달리기 루틴 정착'},
+    {name:'유산소 발달',weeks:buildW, color:'green',  badgeCls:'pb-green',  focus:'거리 증가 · 템포런 도입'},
+    {name:'스피드 강화',weeks:speedW, color:'orange', badgeCls:'pb-orange', focus:'인터벌 · 레이스 페이스 훈련'},
+    {name:'테이퍼',     weeks:taperW, color:'purple', badgeCls:'pb-purple', focus:'컨디션 최상화 · 볼륨 감소'},
+  ];
+
+  // Paces
+  const paces = {
+    race:     p.paceSec,
+    tempo:    p.paceSec - 20,
+    interval: p.paceSec - 45,
+    longRun:  p.paceSec + 60,
+    easy:     p.paceSec + 75,
+    recovery: p.paceSec + 100,
+  };
+
+  // Weekly km generation
+  let km = cfg.startKm;
+  const weeks = [];
+  let wn = 0;
+
+  phasesDef.forEach(ph => {
+    for (let w = 0; w < ph.weeks; w++) {
+      wn++;
+      const isRecovery = (wn % 4 === 0) && ph.name !== '테이퍼';
+      if (ph.name === '테이퍼') {
+        km = Math.max(cfg.startKm * 0.6, cfg.peakKm * (1 - 0.18 * w));
+      } else if (isRecovery) {
+        km = km * 0.80;
+      } else {
+        km = Math.min(km * (1 + prog), cfg.peakKm);
       }
+      const longKm = Math.min(Math.round(km * 0.28 * 10)/10, cfg.maxLong);
+      weeks.push({
+        weekNum: wn,
+        phase: ph.name,
+        phaseBadge: ph.badgeCls,
+        totalKm: Math.round(km * 10) / 10,
+        longKm,
+        isRecovery,
+        days: buildDays(ph.name, km, longKm, paces, p.daysPerWeek, p.age),
+      });
     }
   });
+
+  // Monthly rollup
+  const monthly = [];
+  for (let m = 0; m < p.months; m++) {
+    const mweeks = weeks.slice(m*4, (m+1)*4);
+    const avgKm  = mweeks.reduce((s,w)=>s+w.totalKm,0) / mweeks.length;
+    const phase  = mweeks[0]?.phase || '';
+    const badge  = mweeks[0]?.phaseBadge || 'pb-gray';
+    monthly.push({ month: m+1, avgKm: Math.round(avgKm), phase, badge,
+      focus: phasesDef.find(p=>p.name===phase)?.focus || '' });
+  }
+
+  return { profile: p, paces, phases: phasesDef, weeks, monthly, cfg };
 }
 
-/* ---- TAB SWITCH ---- */
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'chart') setTimeout(renderChart, 50);
-  if (name === 'log') updateLogStats();
-}
+function buildDays(phase, weekKm, longKm, paces, daysPerWeek, age) {
+  const e  = Math.max(3, Math.round(weekKm * 0.18 * 10)/10);
+  const r  = Math.max(2, Math.round(weekKm * 0.10 * 10)/10);
+  const te = Math.max(4, Math.round(weekKm * 0.18 * 10)/10);
+  const it = Math.max(3, Math.round(weekKm * 0.13 * 10)/10);
 
-/* ---- LOG ---- */
-const STORAGE_KEY = 'hm_training_log';
+  const restDay = {type:'rest', km:0, desc:'휴식'};
 
-function getEntries() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
-}
-function saveEntries(entries) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
-
-function calcPace(distKm, timeStr) {
-  if (!distKm || !timeStr) return '';
-  const parts = timeStr.split(':');
-  if (parts.length < 2) return '';
-  const totalSec = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-  if (!totalSec || !distKm) return '';
-  const secPerKm = totalSec / distKm;
-  const min = Math.floor(secPerKm / 60);
-  const sec = Math.round(secPerKm % 60);
-  return `${min}:${String(sec).padStart(2,'0')} /km`;
-}
-
-document.getElementById('inp-dist').addEventListener('input', previewPace);
-document.getElementById('inp-time').addEventListener('input', previewPace);
-function previewPace() {
-  const dist = parseFloat(document.getElementById('inp-dist').value);
-  const time = document.getElementById('inp-time').value;
-  const pace = calcPace(dist, time);
-  document.getElementById('pace-preview').textContent = pace ? `페이스: ${pace}` : '';
-}
-
-function addEntry() {
-  const date = document.getElementById('inp-date').value;
-  const type = document.getElementById('inp-type').value;
-  const dist = parseFloat(document.getElementById('inp-dist').value);
-  const time = document.getElementById('inp-time').value;
-  const note = document.getElementById('inp-note').value.trim();
-
-  if (!date) { alert('날짜를 입력해주세요.'); return; }
-  if (!dist || dist <= 0) { alert('거리를 입력해주세요.'); return; }
-
-  const entry = {
-    id: Date.now(),
-    date, type, dist,
-    time: time || '',
-    pace: calcPace(dist, time),
-    note,
+  const templates = {
+    '기초 체력': [
+      restDay,
+      {type:'easy',     km:e,    desc:`쉬운 달리기 ${e}km`, pace: fmtPace(paces.easy)},
+      {type:'easy',     km:e,    desc:`쉬운 달리기 ${e}km`, pace: fmtPace(paces.easy)},
+      daysPerWeek >= 4 ? {type:'easy', km:r, desc:`쉬운 달리기 ${r}km`, pace:fmtPace(paces.easy)} : restDay,
+      restDay,
+      {type:'long',     km:longKm, desc:`롱런 ${longKm}km`, pace: fmtPace(paces.longRun)},
+      daysPerWeek >= 5 ? {type:'recovery', km:r, desc:`회복 달리기 ${r}km`, pace:fmtPace(paces.recovery)} : restDay,
+    ],
+    '유산소 발달': [
+      restDay,
+      {type:'interval', km:it,   desc:`인터벌 총 ${it}km`,  pace: fmtPace(paces.interval)},
+      {type:'easy',     km:e,    desc:`쉬운 달리기 ${e}km`, pace: fmtPace(paces.easy)},
+      {type:'tempo',    km:te,   desc:`템포런 ${te}km`,     pace: fmtPace(paces.tempo)},
+      daysPerWeek >= 5 ? {type:'easy', km:r, desc:`쉬운 달리기 ${r}km`, pace:fmtPace(paces.easy)} : restDay,
+      {type:'long',     km:longKm, desc:`롱런 ${longKm}km`, pace: fmtPace(paces.longRun)},
+      daysPerWeek >= 6 ? {type:'recovery', km:r, desc:`회복 달리기 ${r}km`, pace:fmtPace(paces.recovery)} : restDay,
+    ],
+    '스피드 강화': [
+      restDay,
+      {type:'interval', km:it,   desc:`인터벌 총 ${it}km`,  pace: fmtPace(paces.interval)},
+      {type:'easy',     km:e,    desc:`쉬운 달리기 ${e}km`, pace: fmtPace(paces.easy)},
+      {type:'tempo',    km:te,   desc:`레이스 페이스 ${te}km`, pace: fmtPace(paces.race)},
+      daysPerWeek >= 5 ? {type:'easy', km:r, desc:`쉬운 달리기 ${r}km`, pace:fmtPace(paces.easy)} : restDay,
+      {type:'long',     km:longKm, desc:`롱런 ${longKm}km`, pace: fmtPace(paces.longRun)},
+      daysPerWeek >= 6 ? {type:'recovery', km:r, desc:`회복 달리기 ${r}km`, pace:fmtPace(paces.recovery)} : restDay,
+    ],
+    '테이퍼': [
+      restDay,
+      {type:'tempo',    km:Math.max(3,te-2), desc:`레이스 페이스 ${Math.max(3,te-2)}km`, pace:fmtPace(paces.race)},
+      {type:'easy',     km:Math.max(3,e-1),  desc:`쉬운 달리기 ${Math.max(3,e-1)}km`,    pace:fmtPace(paces.easy)},
+      daysPerWeek >= 4 ? {type:'interval', km:Math.max(3,it-2), desc:`가벼운 인터벌 ${Math.max(3,it-2)}km`, pace:fmtPace(paces.interval)} : restDay,
+      restDay,
+      {type:'easy',     km:Math.max(3,longKm*0.5), desc:`가벼운 달리기 ${Math.max(3,Math.round(longKm*5)/10)}km`, pace:fmtPace(paces.easy)},
+      restDay,
+    ],
   };
-  const entries = getEntries();
-  entries.unshift(entry);
-  saveEntries(entries);
+  const days = ['월','화','수','목','금','토','일'];
+  return (templates[phase] || templates['기초 체력']).map((d,i)=>({...d, day:days[i]}));
+}
 
-  document.getElementById('inp-date').value = '';
-  document.getElementById('inp-dist').value = '';
-  document.getElementById('inp-time').value = '';
-  document.getElementById('inp-note').value = '';
-  document.getElementById('pace-preview').textContent = '';
+/* ════════════════════════════════════
+   RENDER APP
+════════════════════════════════════ */
+function renderApp(plan) {
+  const p = plan.profile;
+  document.getElementById('app-name').textContent = p.name + '님의 러닝 플랜';
+  document.getElementById('app-sub').textContent =
+    `${DIST_CFG[p.distKm]?.label||p.distKm+'km'} · 목표 페이스 ${fmtPace(p.paceSec)}/km · ${p.months}개월`;
 
-  renderEntries();
+  // chips
+  const chips = [
+    {n: p.bmi.toFixed(1), l:'BMI', color:'#4DD990'},
+    {n: DIST_CFG[p.distKm]?.label||p.distKm+'km', l:'목표 거리', color:'var(--orange)'},
+    {n: fmtPace(p.paceSec)+'/km', l:'목표 페이스', color:'var(--blue)'},
+    {n: p.months+'개월', l:'훈련 기간', color:'var(--purple)'},
+  ];
+  document.getElementById('profile-chips').innerHTML = chips.map(c=>`
+    <div class="pchip">
+      <div class="pchip-n" style="color:${c.color}">${c.n}</div>
+      <div class="pchip-l">${c.l}</div>
+    </div>`).join('');
+
+  renderSummary(plan);
+  renderMonthly(plan);
+  renderWeekly(0);
+  renderPaceGuide(plan);
+  renderChart(plan);
+  updateLogStats();
+  document.getElementById('li-date').value = new Date().toISOString().split('T')[0];
+}
+
+function renderSummary(plan) {
+  const p = plan.profile;
+  const weeks = plan.weeks;
+  const peakKm = Math.max(...weeks.map(w=>w.totalKm));
+  const peakLong = Math.max(...weeks.map(w=>w.longKm));
+
+  // BMI advice
+  let bmiNote = '';
+  if (p.bmi >= 30) bmiNote = '⚠️ BMI가 높은 편이에요. 처음엔 걷기+달리기 구간을 섞고, 무릎 보호에 신경 써주세요.';
+  else if (p.bmi >= 27) bmiNote = 'BMI를 고려해 훈련 강도를 완만하게 설정했어요. 관절 보호를 위해 충분히 워밍업 해주세요.';
+  else if (p.bmi < 18.5) bmiNote = '저체중 구간이에요. 훈련 중 충분한 칼로리와 단백질 섭취가 중요해요.';
+
+  // Age advice
+  let ageNote = '';
+  if (p.age >= 50) ageNote = '50대 이상은 회복에 더 많은 시간이 필요해요. 롱런 다음 날은 꼭 쉬어주세요.';
+  else if (p.age >= 40) ageNote = '40대는 회복을 충분히 챙기는 게 핵심이에요. 강도 높은 훈련 다음 날은 가볍게.';
+
+  document.getElementById('summary-content').innerHTML = `
+    <div class="sgrid g4" style="margin-bottom:14px;">
+      <div class="metric"><div class="mn" style="color:var(--blue)">${weeks.length}주</div><div class="ml">총 훈련 기간</div></div>
+      <div class="metric"><div class="mn" style="color:var(--orange)">${peakKm}km</div><div class="ml">최대 주간 거리</div></div>
+      <div class="metric"><div class="mn" style="color:var(--green)">${peakLong}km</div><div class="ml">최장 롱런 거리</div></div>
+      <div class="metric"><div class="mn" style="color:var(--purple)">${plan.phases.length}단계</div><div class="ml">훈련 단계</div></div>
+    </div>
+    <div class="sgrid g2">
+      ${plan.phases.map(ph=>`
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span class="pbadge ${ph.badgeCls}">${ph.name}</span>
+            <span style="font-size:12px;color:var(--muted);">${ph.weeks}주</span>
+          </div>
+          <p style="font-size:13px;color:var(--muted);">${ph.focus}</p>
+        </div>`).join('')}
+    </div>
+    ${bmiNote||ageNote ? `<div class="card" style="margin-top:14px;">
+      <div class="ctitle">맞춤 주의사항</div>
+      ${bmiNote ? `<p style="font-size:13px;color:var(--muted);margin-bottom:${ageNote?'8px':'0'};">${bmiNote}</p>` : ''}
+      ${ageNote ? `<p style="font-size:13px;color:var(--muted);">${ageNote}</p>` : ''}
+    </div>` : ''}
+    <div class="card" style="margin-top:14px;">
+      <div class="ctitle">거리 증가 그래프</div>
+      <div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#3B8BF5;display:inline-block;"></span>주간 총거리</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#2DCB75;display:inline-block;"></span>롱런</span>
+      </div>
+      <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="주간 훈련 거리 증가 그래프"></canvas></div>
+    </div>`;
+
+  renderChart(plan);
+}
+
+function renderChart(plan) {
+  setTimeout(() => {
+    const el = document.getElementById('mainChart');
+    if (!el||!plan) return;
+    if (el._chart) el._chart.destroy();
+    const labels = plan.weeks.map(w => w.weekNum+'주');
+    const weekly = plan.weeks.map(w => w.totalKm);
+    const longs  = plan.weeks.map(w => w.longKm);
+    el._chart = new Chart(el, {
+      type:'bar',
+      data:{labels,datasets:[
+        {label:'주간 총거리',data:weekly,backgroundColor:'#3B8BF5',borderRadius:2,barPercentage:.6},
+        {label:'롱런',       data:longs, backgroundColor:'#2DCB75',borderRadius:2,barPercentage:.6},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{color:'#8B949E',font:{size:9},autoSkip:true,maxRotation:0},grid:{display:false}},
+          y:{ticks:{color:'#8B949E',font:{size:11}},grid:{color:'rgba(255,255,255,.05)'}},
+        }
+      }
+    });
+  }, 100);
+}
+
+function renderMonthly(plan) {
+  const el = document.getElementById('monthly-content');
+  el.innerHTML = `<div class="ctitle">월별 훈련 계획</div>
+    <div style="display:grid;grid-template-columns:28px 86px 100px 1fr 68px;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:2px;">
+      <span style="font-size:11px;color:var(--hint);">월</span>
+      <span style="font-size:11px;color:var(--hint);">단계</span>
+      <span style="font-size:11px;color:var(--hint);">주간 거리</span>
+      <span style="font-size:11px;color:var(--hint);">집중 포인트</span>
+      <span style="font-size:11px;color:var(--hint);text-align:right;">평균km</span>
+    </div>`+
+    plan.monthly.map(m=>`
+    <div class="month-row">
+      <span class="month-n">${m.month}월차</span>
+      <span class="pbadge ${m.badge}" style="font-size:10px;">${m.phase}</span>
+      <span style="font-size:12px;color:var(--muted);">${getWeekRange(plan, m.month)}km</span>
+      <span class="month-focus">${m.focus}</span>
+      <span class="month-km">${m.avgKm}km</span>
+    </div>`).join('');
+}
+
+function getWeekRange(plan, monthNum) {
+  const ws = plan.weeks.slice((monthNum-1)*4, monthNum*4);
+  if (!ws.length) return '—';
+  const mn = Math.min(...ws.map(w=>w.totalKm));
+  const mx = Math.max(...ws.map(w=>w.totalKm));
+  return `${mn}~${mx}`;
+}
+
+function renderWeekly(idx) {
+  if (!planData) return;
+  const w = planData.weeks[idx];
+  if (!w) return;
+  currentWeek = idx;
+
+  document.getElementById('week-num-label').textContent = `${w.weekNum}주차`;
+  document.getElementById('week-phase-label').innerHTML =
+    `<span class="pbadge ${w.phaseBadge}" style="font-size:10px;">${w.phase}</span>${w.isRecovery?' · 회복 주간':''}`;
+
+  const grid = document.getElementById('days-grid');
+  grid.innerHTML = w.days.map(d=>`
+    <div class="day-card${d.type==='rest'?' rest':''}">
+      <div class="day-label-row">
+        <span class="day-name">${d.day}요일</span>
+        <span class="day-type-dot ${TYPE_DOT[d.type]}"></span>
+      </div>
+      <div class="day-km" style="color:${d.type==='rest'?'var(--hint)':TYPE_COLOR[d.type]}">${d.km > 0 ? d.km+'km' : '—'}</div>
+      <div class="day-type-text">${TYPE_LABEL[d.type]}</div>
+      ${d.pace && d.type!=='rest' ? `<div class="day-pace">${d.pace}/km</div>` : ''}
+    </div>`).join('');
+
+  const totalKm = w.days.reduce((s,d)=>s+d.km,0);
+  const runs = w.days.filter(d=>d.type!=='rest').length;
+  document.getElementById('week-summary-bar').innerHTML = `
+    <div class="ws-item"><div class="ws-n" style="color:var(--blue)">${w.totalKm}km</div><div class="ws-l">총 거리</div></div>
+    <div class="ws-item"><div class="ws-n" style="color:var(--green)">${w.longKm}km</div><div class="ws-l">롱런</div></div>
+    <div class="ws-item"><div class="ws-n" style="color:var(--orange)">${runs}회</div><div class="ws-l">달리기 횟수</div></div>
+    <div class="ws-item"><div class="ws-n" style="color:var(--purple)">${w.weekNum}/${planData.weeks.length}</div><div class="ws-l">전체 진행도</div></div>`;
+
+  const tips = {
+    '기초 체력': '아직 속도보다 지구력이 우선이에요. 롱런은 대화를 나눌 수 있는 편한 페이스로 달리세요.',
+    '유산소 발달': '인터벌 처음 200m는 절대 너무 빠르게 시작하지 마세요. 페이스를 균등하게 유지하는 게 핵심이에요.',
+    '스피드 강화': '이 구간에서 레이스 페이스를 몸에 각인시키는 게 목표예요. 속도보다 일관성에 집중하세요.',
+    '테이퍼': '볼륨이 줄어도 페이스는 유지해요. 힘이 빠지는 느낌은 정상 — 믿고 쉬는 게 전략이에요.',
+  };
+  document.getElementById('week-tip').textContent = tips[w.phase] || '';
+}
+
+function changeWeek(dir) {
+  const nw = currentWeek + dir;
+  if (!planData || nw < 0 || nw >= planData.weeks.length) return;
+  renderWeekly(nw);
+}
+
+function renderPaceGuide(plan) {
+  const pr = plan.paces;
+  const rows = [
+    {name:'인터벌',      sec:pr.interval, pct:100, color:'#FF6B35'},
+    {name:'템포런',      sec:pr.tempo,    pct:82,  color:'#F0C040'},
+    {name:'레이스 페이스',sec:pr.race,    pct:68,  color:'#3B8BF5'},
+    {name:'롱런',        sec:pr.longRun,  pct:50,  color:'#2DCB75'},
+    {name:'쉬운 달리기', sec:pr.easy,     pct:36,  color:'#8B949E'},
+    {name:'회복 달리기', sec:pr.recovery, pct:25,  color:'#555E6A'},
+  ];
+  document.getElementById('pace-guide-content').innerHTML = rows.map(r=>`
+    <div class="pace-row">
+      <span class="pace-name">${r.name}</span>
+      <div class="pace-track"><div class="pace-fill" style="width:${r.pct}%;background:${r.color};"></div></div>
+      <span class="pace-val">${fmtPace(r.sec)} /km</span>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════
+   PACE CALCULATOR
+════════════════════════════════════ */
+function calcPaceTarget() {
+  const dist = parseFloat(document.getElementById('calc-dist').value);
+  const timeStr = document.getElementById('calc-time').value.trim();
+  const el = document.getElementById('calc-result');
+  if (!dist||!timeStr) { el.textContent='—'; return; }
+  const parts = timeStr.split(':');
+  let totalSec = 0;
+  if (parts.length===3) totalSec = parseInt(parts[0])*3600+parseInt(parts[1])*60+parseInt(parts[2]);
+  else if (parts.length===2) totalSec = parseInt(parts[0])*60+parseInt(parts[1]);
+  else { el.textContent='—'; return; }
+  if (!totalSec||!dist) { el.textContent='—'; return; }
+  el.textContent = fmtPace(totalSec/dist) + ' /km';
+}
+
+/* ════════════════════════════════════
+   TAB & MISC
+════════════════════════════════════ */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tp-'+name).classList.add('active');
+  if (name==='log') updateLogStats();
+}
+
+function resetApp() {
+  if (!confirm('처음부터 다시 시작할까요?')) return;
+  planData = null;
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('onboarding').style.display = '';
+  goStep(0);
+  ['f-name','f-age','f-height','f-weight','f-dist','f-pace','f-months','f-days','f-pb'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  document.getElementById('bmi-val').textContent='—';
+  document.getElementById('bmi-badge').textContent='키·몸무게 입력 시 자동 계산';
+}
+
+/* ════════════════════════════════════
+   LOG
+════════════════════════════════════ */
+function getLogs() { try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]');}catch{return[];} }
+function saveLogs(d) { localStorage.setItem(LOG_KEY,JSON.stringify(d)); }
+
+function calcPaceSec(distKm, timeStr) {
+  if (!distKm||!timeStr) return null;
+  const p=timeStr.split(':');
+  if(p.length<2) return null;
+  const s=parseInt(p[0])*60+parseInt(p[1]);
+  if(!s||!distKm) return null;
+  return s/distKm;
+}
+
+function previewPace() {
+  const dist=parseFloat(document.getElementById('li-dist').value);
+  const time=document.getElementById('li-time').value;
+  const sec=calcPaceSec(dist,time);
+  document.getElementById('pace-preview').textContent = sec ? '페이스: '+fmtPace(sec)+' /km' : '';
+}
+
+function addLogEntry() {
+  const date=document.getElementById('li-date').value;
+  const type=document.getElementById('li-type').value;
+  const dist=parseFloat(document.getElementById('li-dist').value);
+  const time=document.getElementById('li-time').value;
+  const note=document.getElementById('li-note').value.trim();
+  if(!date){alert('날짜를 입력해주세요.');return;}
+  if(!dist||dist<=0){alert('거리를 입력해주세요.');return;}
+  const sec=calcPaceSec(dist,time);
+  const entry={id:Date.now(),date,type,dist,time:time||'',pace:sec?fmtPace(sec):'',note};
+  const logs=getLogs();
+  logs.unshift(entry);
+  saveLogs(logs);
+  document.getElementById('li-dist').value='';
+  document.getElementById('li-time').value='';
+  document.getElementById('li-note').value='';
+  document.getElementById('pace-preview').textContent='';
+  renderLogEntries();
   updateLogStats();
 }
 
-function deleteEntry(id) {
-  const entries = getEntries().filter(e => e.id !== id);
-  saveEntries(entries);
-  renderEntries();
+function deleteLog(id) {
+  saveLogs(getLogs().filter(e=>e.id!==id));
+  renderLogEntries();
   updateLogStats();
 }
 
 function getWeekKey(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d.setDate(diff));
-  return mon.toISOString().split('T')[0];
+  const d=new Date(dateStr);
+  const diff=d.getDate()-d.getDay()+(d.getDay()===0?-6:1);
+  return new Date(new Date(d).setDate(diff)).toISOString().split('T')[0];
+}
+function fmtWeek(wk) {
+  const d=new Date(wk);
+  const e=new Date(d);e.setDate(e.getDate()+6);
+  const f=dt=>`${dt.getMonth()+1}/${dt.getDate()}`;
+  return `${d.getFullYear()}년 ${f(d)} ~ ${f(e)}`;
 }
 
-function formatWeekLabel(weekKey) {
-  const d = new Date(weekKey);
-  const end = new Date(d); end.setDate(end.getDate() + 6);
-  const fmt = (dt) => `${dt.getMonth()+1}/${dt.getDate()}`;
-  return `${d.getFullYear()}년 ${fmt(d)} ~ ${fmt(end)}`;
-}
-
-function renderEntries() {
-  const entries = getEntries();
-  const container = document.getElementById('entries-container');
-  if (entries.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🏃</div><div>아직 기록된 훈련이 없어요.<br>첫 번째 훈련을 기록해 보세요!</div></div>`;
+function renderLogEntries() {
+  const logs=getLogs();
+  const el=document.getElementById('log-entries');
+  if(!logs.length){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">🏃</div>아직 기록이 없어요.<br>첫 훈련을 기록해 보세요!</div>`;
     return;
   }
-  const byWeek = {};
-  entries.forEach(e => {
-    const wk = getWeekKey(e.date);
-    if (!byWeek[wk]) byWeek[wk] = [];
-    byWeek[wk].push(e);
-  });
-  const sortedWeeks = Object.keys(byWeek).sort((a,b)=>b.localeCompare(a));
-  container.innerHTML = '';
-  sortedWeeks.forEach(wk => {
-    const group = document.createElement('div');
-    group.className = 'week-group';
-    const weekEntries = byWeek[wk];
-    const weekKm = weekEntries.reduce((s,e)=>s+e.dist,0);
-    group.innerHTML = `<div class="week-label">${formatWeekLabel(wk)} <span style="color:var(--green);font-family:'DM Mono',monospace;margin-left:8px;">${weekKm.toFixed(1)}km</span></div>`;
-    weekEntries.forEach(e => {
-      const card = document.createElement('div');
-      card.className = 'entry-card';
-      const dateObj = new Date(e.date);
-      const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
-      card.innerHTML = `
-        <div class="entry-date">${dateStr}</div>
-        <div class="entry-main">
-          <div class="entry-top">
-            <span class="entry-type-badge ${typeCls[e.type]}">${typeLabel[e.type]}</span>
-            <span class="entry-dist">${e.dist.toFixed(1)}km</span>
-            ${e.time ? `<span class="entry-pace">${e.time} · ${e.pace}</span>` : ''}
+  const byWeek={};
+  logs.forEach(e=>{const wk=getWeekKey(e.date);if(!byWeek[wk])byWeek[wk]=[];byWeek[wk].push(e);});
+  const sorted=Object.keys(byWeek).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML='';
+  sorted.forEach(wk=>{
+    const entries=byWeek[wk];
+    const wkKm=entries.reduce((s,e)=>s+e.dist,0);
+    const g=document.createElement('div');
+    g.className='week-group';
+    g.innerHTML=`<div class="week-hdr">${fmtWeek(wk)} <span style="color:var(--green);font-family:'DM Mono',monospace;margin-left:8px;">${wkKm.toFixed(1)}km</span></div>`;
+    entries.forEach(e=>{
+      const dateObj=new Date(e.date);
+      const ds=`${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+      const card=document.createElement('div');
+      card.className='entry';
+      card.innerHTML=`
+        <div class="entry-date">${ds}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
+            <span class="entry-badge ${TYPE_CLS[e.type]}">${TYPE_LABEL[e.type]}</span>
+            <span class="entry-km">${e.dist.toFixed(1)}km</span>
+            ${e.time?`<span class="entry-pace">${e.time}${e.pace?' · '+e.pace+'/km':''}</span>`:''}
           </div>
-          ${e.note ? `<div class="entry-note">${e.note}</div>` : ''}
+          ${e.note?`<div class="entry-note">${e.note}</div>`:''}
         </div>
-        <div class="entry-actions">
-          <button class="btn-ghost" onclick="deleteEntry(${e.id})">삭제</button>
-        </div>`;
-      group.appendChild(card);
+        <button class="btn-ghost" onclick="deleteLog(${e.id})">삭제</button>`;
+      g.appendChild(card);
     });
-    container.appendChild(group);
+    el.appendChild(g);
   });
 }
 
 function updateLogStats() {
-  const entries = getEntries();
-  const total = entries.reduce((s,e)=>s+e.dist,0);
-  const count = entries.length;
-  const now = new Date();
-  const thisWeek = getWeekKey(now.toISOString().split('T')[0]);
-  const weekKm = entries.filter(e=>getWeekKey(e.date)===thisWeek).reduce((s,e)=>s+e.dist,0);
-  const longKm  = entries.filter(e=>e.type==='long').reduce((mx,e)=>Math.max(mx,e.dist),0);
-  document.getElementById('stat-total-km').textContent = total.toFixed(1);
-  document.getElementById('stat-count').textContent    = count;
-  document.getElementById('stat-week-km').textContent  = weekKm.toFixed(1);
-  document.getElementById('stat-long-km').textContent  = longKm.toFixed(1);
+  const logs=getLogs();
+  const total=logs.reduce((s,e)=>s+e.dist,0);
+  const thisWk=getWeekKey(new Date().toISOString().split('T')[0]);
+  const wkKm=logs.filter(e=>getWeekKey(e.date)===thisWk).reduce((s,e)=>s+e.dist,0);
+  const longKm=logs.filter(e=>e.type==='long').reduce((mx,e)=>Math.max(mx,e.dist),0);
+  document.getElementById('ls-total').textContent=total.toFixed(1);
+  document.getElementById('ls-count').textContent=logs.length;
+  document.getElementById('ls-week').textContent=wkKm.toFixed(1);
+  document.getElementById('ls-long').textContent=longKm.toFixed(1);
+  renderLogEntries();
 }
 
-/* ---- SET DEFAULT DATE ---- */
+/* init */
 document.addEventListener('DOMContentLoaded', () => {
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('inp-date').value = today;
-  renderTimeline();
-  renderPhaseBtns();
-  renderIntervals();
-  renderPaceGuide();
-  renderEntries();
-  updateLogStats();
+  document.getElementById('li-date').value = new Date().toISOString().split('T')[0];
 });
 </script>
 </body>
